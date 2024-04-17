@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Home - OJT Portal</title>
+
+    <!-- font awesome cdn link  -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css"
+    />
+
+    <!-- custom css file link  -->
+    <link rel="stylesheet" type="text/css" href="/css/style.css" />
+  </head>
+  <body>
+    <script>
+      console.log("Executing confirm.js logic...");
+      console.log("Teacher ID: ", "<%= teacherUserId %>");
+
+      const queryString = `userID=${encodeURIComponent(
+        "<%= teacherUserId %>"
+      )}`;
+
+      fetch(`/homepage?${queryString}`)
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then((data) => {
+          console.log("Response Data:", data);
+          if (data.fullName) {
+            console.log("Full Name:", data.fullName);
+            window.location.href = `${window.location.protocol}//${window.location.host}/homepage`;
+          } else {
+            console.error("Unexpected response from server:", data);
+          }
+        })
+        .catch((error) => {
+          console.error("Error:", error);
+        });
+    </script>
+    <header class="header">
+      <section class="flex">
+        <a href="/homepage" class="logo">OJT Portal</a>
+
+        <div class="icons">
+          <div id="menu-btn" class="fas fa-bars"></div>
+          <div id="search-btn" class="fas fa-search"></div>
+          <div id="toggle-btn" class="fas fa-sun"></div>
+        </div>
+      </section>
+    </header>
+
+    <div class="side-bar">
+      <div id="close-btn">
+        <i class="fas fa-times"></i>
+      </div>
+
+      <div class="profile">
+        <img src="/images/pic-1.jpg" class="image" alt="" />
+        <h3 class="name"><%= fullName %></h3>
+        <p class="role">Teacher</p>
+        <a href="/profile" class="btn">view profile</a>
+      </div>
+
+      <nav class="navbar">
+        <a href="/homepage"><i class="fas fa-home"></i><span>Home</span></a>
+        <a href="/manage-students"><i class="fa-solid fa-briefcase"></i><span>Manage Students</span></a>
+        <a href="/company-details"><i class="fa-solid fa-door-open"></i><span>Company Details</span></a>
+        <a href="/logout"><i class="fa-solid fa-door-open"></i><span>Log Out</span></a>
+      </nav>
+    </div>
+
+    <section class="home-grid">
+      <h1 class="heading">Dashboard</h1>
+      <div class="box-container">
+        <div class="adminbox">
+          <h3 class="title">Student Contact List</h3>
+          <hr class="hrule">
+          <br>
+        
+          <table>
+            <tr>
+              <th>Student ID</th>
+              <th>Name</th>
+              <th>Email</th>
+            </tr>
+            <% students.forEach(student => { %>
+            <tr>
+              <td><%= student.studentId %></td>
+              <td><%= student.fullName %></td>
+              <td><%= student.email %></td>
+            </tr>
+            <% }); %>
+          </table>
+        </div>
+
+        <div class="adminbox">
+          <h3 class="title">Create Announcement</h3>
+          <hr class="hrule">
+          <form id="announcementForm">
+            <label for="announcementTitle">Title:</label>
+            <input
+              type="text"
+              id="announcementTitle"
+              name="announcementTitle"
+              placeholder="Enter announcement title..."
+              required
+            />
+            <label for="announcementText">Announcement:</label>
+            <textarea
+              id="announcementText"
+              name="announcementText"
+              placeholder="Type your announcement here..."
+              required
+            ></textarea>
+            <button type="button" onclick="submitAnnouncement()">
+              Submit Announcement
+            </button>
+          </form>
+          <br>
+          <div class="adminbox">
+  <h3 class="title">Announcements</h3>
+  <hr class="hrule">
+  <br>
+  <table>
+    <tr>
+      <th>Title</th>
+      <th>Message</th>
+      <th>Date Posted</th>
+      <th>Actions</th>
+    </tr>
+  
+    <script>
+      console.log(typeof '<%= announcements%>');
+      console.log(JSON.parse('<%= announcements%>'));
+    </script>
+</script> 
+<% announcements.forEach(announcement => { %>
+  <script>
+    console.log( "foo");
+    console.log( '<%= announcement.announcementId%>');
+    console.log( '<%= announcement.title%>');
+    console.log( '<%= announcement.message%>');
+    console.log( "foo");
+
+  </script>
+
+  <tr id="announcement-row-<%= announcement.announcementId %>">
+      <td><span id="title-<%= announcement.announcementId %>"><%= announcement.title %></span></td>
+      <td><span id="message-<%= announcement.announcementId %>"><%= announcement.message %></span></td>
+      <td><%= announcement.datePosted %></td>
+      <td>
+          <button onclick="editAnnouncement('<%= announcement.announcementId %>')">Edit</button>
+          <button onclick="deleteAnnouncement('<%= announcement.announcementId %>')">Delete</button>
+      </td>
+  </tr>
+<% }); %>    
+  
+  </table>
+</div>
+        </div>
+
+        <script>
+          function submitAnnouncement() {
+            const announcementTitle =
+              document.getElementById("announcementTitle").value;
+            const announcementText =
+              document.getElementById("announcementText").value;
+
+            if (
+              announcementTitle.trim() === "" ||
+              announcementText.trim() === ""
+            ) {
+              alert("Please enter both title and announcement text.");
+              return;
+            }
+
+            const teacherUserId = "<%= teacherUserId %>";
+            const data = {
+              teacherId: teacherUserId,
+              title: announcementTitle,
+              message: announcementText,
+            };
+
+            fetch("/submit-announcement", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(data),
+            })
+              .then((response) => {
+                if (!response.ok) {
+                  throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+              })
+              .then((data) => {
+                alert("Announcement submitted successfully:", data);
+                location.reload();
+              })
+              .catch((error) => {
+                console.error("Error:", error);
+              });
+          }
+        </script>
+      </div>
+    </section>
+
+    <footer class="footer">
+      &copy; Copyright @ 2023 by <span>The Croods</span> | All rights reserved!
+    </footer>
+
+    <!-- custom js file link  -->
+    <script src="/js/script.js"></script>
+    <script>
+      function editAnnouncement(announcementId) {
+        const row = document.getElementById(`announcement-row-${announcementId}`);
+        const title = document.getElementById(`title-${announcementId}`).innerText;
+        const message = document.getElementById(`message-${announcementId}`).innerText;
+
+        // Replace text with input fields
+        document.getElementById(`title-${announcementId}`).innerHTML = `<input type='text' id='edit-title-${announcementId}' value='${title}' />`;
+        document.getElementById(`message-${announcementId}`).innerHTML = `<input type='text' id='edit-message-${announcementId}' value='${message}' />`;
+
+        // Replace the Edit button with a Save button
+        row.querySelector('button').outerHTML = `<button onclick="saveAnnouncement('${announcementId}')">Save</button>`;
+      }
+
+      function saveAnnouncement(announcementId) {
+    const editedTitle = document.getElementById(`edit-title-${announcementId}`).value;
+    const editedMessage = document.getElementById(`edit-message-${announcementId}`).value;
+
+    // Prepare the data to be sent in the request
+    const data = {
+        announcementId: announcementId,
+        title: editedTitle,
+        message: editedMessage
+    };
+    console.log(data);
+
+    // Make an AJAX call to submit the edited data to the server
+    fetch(`/edit-announcement`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Handle success
+        console.log('Success:', data);
+
+        // Update the UI with the new title and message
+        document.getElementById(`title-${announcementId}`).innerText = editedTitle;
+        document.getElementById(`message-${announcementId}`).innerText = editedMessage;
+
+        // Change the Save button back to the Edit button
+        const row = document.getElementById(`announcement-row-${announcementId}`);
+        row.querySelector('button').outerHTML = `<button onclick="editAnnouncement('${announcementId}')">Edit</button>`;
+        
+        // Optionally, show a success message to the user
+        alert('Announcement updated successfully!');
+        location.reload();
+    })
+    .catch(error => {
+        // Handle errors
+        console.error('Error:', error);
+        alert('Error updating announcement. Please try again.');
+    });
+}
+
+      function deleteAnnouncement(announcementId){
+
+        const data = {
+        announcementId: announcementId
+    };
+
+        fetch(`/delete-announcement`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Handle success
+        console.log('Success:', data);
+
+        // Optionally, show a success message to the user
+        alert('Announcement deleted successfully!');
+        location.reload();
+    })
+    .catch(error => {
+        // Handle errors
+        console.error('Error:', error);
+        alert('Error updating announcement. Please try again.');
+        location.reload();
+    });
+}
+      console.log("fullName:", "<%= fullName %>");
+    </script>
+  </body>
+</html>

@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8">
+   <meta http-equiv="X-UA-Compatible" content="IE=edge">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Home - OJT Portal</title>
+
+   <!-- font awesome cdn link  -->
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css">
+
+   <!-- custom css file link  -->
+   <link rel="stylesheet" type="text/css" href="/css/style.css">
+
+</head>
+<body>
+<header class="header">
+   
+   <section class="flex">
+
+      <a href="/homepage" class="logo">OJT Portal</a>
+
+
+      <div class="icons">
+         <div id="menu-btn" class="fas fa-bars"></div> 
+         <div id="search-btn" class="fas fa-search"></div>
+         <div id="toggle-btn" class="fas fa-sun"></div>
+      </div>
+
+   </section>
+
+</header>   
+
+<div class="side-bar">
+
+   <div id="close-btn">
+      <i class="fas fa-times"></i>
+   </div>
+
+   <div class="profile">
+      <img src="/images/pic-1.jpg" class="image" alt="">
+      <h1 class="name"><%= fullName %></h1>
+      <p class="role">Teacher</p>
+      <a href="/profile" class="btn">view profile</a>
+   </div>
+
+   <nav class="navbar">
+      <a href="/homepage"><i class="fas fa-home"></i><span>Home</span></a>
+      <a href="/manage-students"><i class="fa-solid fa-briefcase"></i><span>Manage Students</span></a>
+      <a href="/company-details"><i class="fa-solid fa-door-open"></i><span>Company Details</span></a>
+      <a href="/logout"><i class="fa-solid fa-door-open"></i><span>Log Out</span></a>
+    </nav>
+
+</div>
+
+<section class="manage-grid">
+    <div class="manage-container">
+        <div class="box">
+            <h1 class="title">Student List</h1>
+            <hr class="hrule">
+            <br>
+            <form id="filterForm">
+                <label for="searchQuery">Search:</label>
+                <input type="text" id="searchQuery" name="searchQuery" placeholder="Enter search query...">
+                <button type="button" onclick="submitSearch()">Search</button>
+            </form>
+ 
+            <!-- Add the checkbox here -->
+            <br>
+            <input type="checkbox" id="showMyStudents" name="showMyStudents" onclick="showMyStudents()">
+            <label for="showMyStudents">Show my students</label>
+            
+            <table id="studentTable">
+                <thead>
+                    <tr>
+                        <th>Student ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Course</th>
+                        <th>Class Code</th>
+                        <th>Company</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+<script>
+    let studentId;
+    window.onload = function () {
+      fetchAllStudents();
+   }
+
+   function fetchAllStudents() {
+      fetch('/fetch-all-students')
+         .then(response => response.json())
+         .then(data => populateTable(data))
+         .catch(error => console.error('Error:', error));
+   }
+
+   function submitSearch() {
+      const searchQuery = document.getElementById('searchQuery').value.trim();
+      fetch(`/search-students?query=${searchQuery}`)
+         .then(response => response.json())
+         .then(data => populateTable(data))
+         .catch(error => console.error('Error:', error));
+   }
+
+   function populateTable(data) {
+    const tableBody = document.getElementById('tableBody');
+    tableBody.innerHTML = ''; 
+
+    data.forEach(student => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${student.studentId}</td>
+            <td>${student.fullName}</td>
+            <td>${student.email}</td>
+            <td>${student.course}</td>
+            <td>${student.classCode}</td>
+            <td>${student.company}</td>
+        `;
+        row.setAttribute("data-student-id", student.studentId); // Add a data attribute
+        row.setAttribute("class", "student-row");
+        row.addEventListener("click", function() { selectRow(this); });
+        tableBody.appendChild(row);
+    });
+   }
+
+   function populateAllReportsTable(reports) {
+    let allRreportsTableBody = document.querySelector("#allReportsTable tbody");
+    allRreportsTableBody.innerHTML = ''; // Clear existing rows
+
+    reports.forEach(report => {
+        let row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${report.weekNum}</td>
+            <td>${report.hoursWorked}</td>
+            <td>${new Date(report.submittedAt).toLocaleDateString()}</td>
+            <td><a href="${report.reportFile.replace('/public', '')}" target="_blank">Show File</a></td>
+            <td>${report.demerit || 'N/A'}</td>
+            <td>${report.comment || 'N/A'}</td>
+            <td>${reportStatusToText(report.status)}</td>
+        `;
+        allRreportsTableBody.appendChild(row);
+    });
+}
+
+function updateHoursWorked(hours) {
+    const headerHours = document.getElementById("hours-worked");
+    headerHours.textContent = "Hours Worked: " + hours;
+}
+
+function reportStatusToText(status) {
+    switch(status) {
+        case 0: return 'Missing';
+        case 1: return 'Reviewing';
+        case 2: return 'Approved';
+        default: return 'Unknown';
+    }
+}
+
+function selectRow(row) {
+    // Remove highlighting from all rows
+    document.querySelectorAll('#studentTable tr').forEach(tr => {
+        tr.classList.remove('highlighted');
+    });
+
+    // Highlight the selected row
+    row.classList.add('highlighted');
+
+    studentId = row.getAttribute('data-student-id');  
+    console.log('Selected Student ID:', studentId);
+
+    // Fetch whether the student is assigned to this teacher
+    fetch(`/is-student-assigned?studentId=${studentId}`)
+        .then(response => response.json())
+        .then(data => {
+            setButtonStates(!data.isAssigned);
+
+            // Fetch Requirements
+            fetch(`/student-requirements?studentId=${studentId}`)
+                .then(response => response.json())
+                .then(data => updateRequirementsUI(data))
+                .catch(error => console.error('Error:', error));
+
+            // Fetch Reports
+            fetch(`/student-reports?studentId=${studentId}`)
+                .then(response => response.json())
+                .then(reports => updateReportsTable(reports, data.isAssigned))
+                .catch(error => console.error('Error:', error));
+
+            fetch(`/fetch-all-reports?studentId=${studentId}`)
+                .then(response => response.json())
+                .then(reports => populateAllReportsTable(reports))
+                .catch(error => console.error('Error:', error));
+            
+            // Fetch Number of Hours worked
+            fetch(`/fetch-hours-worked?studentId=${studentId}`)
+                .then(response => response.json())
+                .then(hours => updateHoursWorked(hours))
+                .catch(error => console.error('Error:', error));
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+   }
+
+   
+
+   function setButtonStates(disabled) {
+    // Disable/Enable buttons in the Requirements section
+    document.querySelectorAll('.reqtable button').forEach(button => {
+        button.disabled = disabled;
+    });
+
+    // Disable/Enable buttons in the 'Reports to be reviewed' section
+    document.querySelectorAll('.reportsTable button').forEach(button => {
+        button.disabled = disabled;
+    });
+
+}
+
+   
+
+   function updateRequirementsUI(data) {
+    const statusToText = (status) => {
+        switch(status) {
+            case 0: return 'Missing';
+            case 1: return 'Reviewing';
+            case 2: return 'Approved';
+            default: return 'Unknown';
+        }
+    };
+
+    const updateButtonVisibility = (requirement, status) => {
+        document.getElementById(`btn-${requirement}`).style.display = status === 1 ? 'block' : 'none';
+    };
+
+    document.querySelector(".requirements.job-resume span").textContent = statusToText(data.jobResume);
+    updateButtonVisibility('jobResume', data.jobResume);
+
+    document.querySelector(".requirements.curriculum-vitae span").textContent = statusToText(data.curriVitae);
+    updateButtonVisibility('curriVitae', data.curriVitae);
+
+    document.querySelector(".requirements.cover-letter span").textContent = statusToText(data.coverLetter);
+    updateButtonVisibility('coverLetter', data.coverLetter);
+
+    document.querySelector(".requirements.moa span").textContent = statusToText(data.moa);
+    updateButtonVisibility('moa', data.moa);
+
+    document.querySelector(".requirements.medical-certificate span").textContent = statusToText(data.medCert);
+    updateButtonVisibility('medCert', data.medCert);
+
+    document.querySelector(".requirements.waiver span").textContent = statusToText(data.waiver);
+    updateButtonVisibility('waiver', data.waiver);
+}
+
+function updateReportsTable(reports, isAssigned) {
+    let reportsTableBody = document.querySelector(".reportsTable tbody");
+    if (reportsTableBody) {
+        reportsTableBody.innerHTML = ''; // Clear existing rows
+
+        reports.forEach(report => {
+            let row = document.createElement('tr');
+            // Add the data-report-id attribute here
+            row.setAttribute('data-report-id', report.reportId);
+            console.log(report.comment);
+            console.log(isAssigned);
+            row.innerHTML = `
+                <td>${report.weekNum}</td>
+                <td>${report.hoursWorked}</td>
+                <td>${new Date(report.submittedAt).toLocaleDateString()}</td>
+                <td><a href="${report.reportFile.replace('/public', '')}" target="_blank">Show File</a></td>
+                <td><input class="inputReviewText" id="demerit-${report.reportId}" type="number" min="0" step="1" ${isAssigned == true ? '' : 'disabled'} /></td>
+                <td><input class="inputReviewText" id="comment-${report.reportId}" ${isAssigned == true ? '' : 'disabled'}/></td>
+                <td><button class="inputReview" type="button" onclick="approveReport(${report.reportId})" ${isAssigned == true ? '' : 'disabled'}>Approve</button></td>
+            `;
+            reportsTableBody.appendChild(row);
+        });
+    } else {
+        console.error('Reports table body not found');
+    }
+}
+
+
+function approveReport(reportId) {
+    const demerit = document.querySelector("input#demerit-" + reportId + ".inputReviewText").value;
+    const comment = document.querySelector("input#comment-" + reportId + ".inputReviewText").value;
+    fetch('/approve-report', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ reportId: reportId, demerit: demerit, comment: comment })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('Report approved successfully');
+
+            const reportRow = document.querySelector(`tr[data-report-id="${reportId}"]`);
+            if (reportRow) {
+                reportRow.remove();
+            }
+        } else {
+            console.error('Failed to approve report');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
+function showMyStudents() {
+      const showMyStudentsCheckbox = document.getElementById('showMyStudents');
+      const filterForm = document.getElementById('filterForm');
+      const searchQueryInput = document.getElementById('searchQuery');
+      
+      if (showMyStudentsCheckbox.checked) {
+         fetch(`/fetch-my-students`)
+            .then(response => response.json())
+            .then(data => populateTable(data))
+            .catch(error => console.error('Error:', error));
+
+         filterForm.style.display = 'none';
+      } else {
+         fetchAllStudents();
+         filterForm.style.display = 'block';
+      }
+      searchQueryInput.value = '';
+   }
+
+   function updateRequirementStatus(requirement) {
+    fetch(`/update-requirement-status`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            requirement: requirement,
+            studentId: studentId,
+            status: 2,
+        }),
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log(`Status for ${requirement} updated successfully.`);
+            fetch(`/student-requirements?studentId=${studentId}`)
+                .then(response => response.json())
+                .then(data => updateRequirementsUI(data))
+                .catch(error => console.error('Error fetching updated requirements:', error));
+        } else {
+            console.error(`Failed to update status for ${requirement}.`);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
+
+
+</script>
+<div class="manage-container">
+    <div class="box">
+        <h1 class="title">Manage Student</h1>
+        <hr class="hrule">
+        <br>
+        <h2 id="hours-worked" class="reqhed"></h2>
+        <h2 class="reqhed">Requirements</h2>
+        <table class="reqtable" style="border-collapse: collapse; border: none;">
+            <tr>
+                <th>Requirement</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+            <tr>
+                <td>Job Resume</td>
+                <td class="requirements job-resume"><span></span></td>
+                <td><button class="inputReview" id="btn-jobResume" style="display: none;" onclick="updateRequirementStatus('jobResume')">Approve</button></td>
+            </tr>
+            <tr>
+                <td>Curriculum Vitae</td>
+                <td class="requirements curriculum-vitae"><span></span></td>
+                <td><button class="inputReview" id="btn-curriVitae" style="display: none;" onclick="updateRequirementStatus('curriVitae')">Approve</button></td>
+            </tr>
+            <tr>
+                <td>Cover Letter</td>
+                <td class="requirements cover-letter"><span></span></td>
+                <td><button class="inputReview" id="btn-coverLetter" style="display: none;" onclick="updateRequirementStatus('coverLetter')">Approve</button></td>
+            </tr>
+            <tr>
+                <td>MOA</td>
+                <td class="requirements moa"><span></span></td>
+                <td><button class="inputReview" id="btn-moa" style="display: none;" onclick="updateRequirementStatus('moa')">Approve</button></td>
+            </tr>
+            <tr>
+                <td>Medical Certificate</td>
+                <td class="requirements medical-certificate"><span></span></td>
+                <td><button class="inputReview" id="btn-medCert" style="display: none;" onclick="updateRequirementStatus('medCert')">Approve</button></td>
+            </tr>
+            <tr>
+                <td>Waiver</td>
+                <td class="requirements waiver"><span></span></td>
+                <td><button class="inputReview" id="btn-waiver" style="display: none;" onclick="updateRequirementStatus('waiver')">Approve</button></td>
+            </tr>
+        </table>
+    </div>
+     
+    
+        <br>
+       <h2 class="reqhed">Reports to be reviewed</h2>
+       <table class="reportsTable">
+         <thead>
+             <tr>
+                 <th>Week</th>
+                 <th>Hours Worked</th>
+                 <th>Submitted</th>
+                 <th>File</th>
+                 <th>Demerit</th>
+                 <th>Comment</th>
+                 <th>Status</th>
+             </tr>
+         </thead>
+         <tbody>
+             <!-- Rows will be added here dynamically -->
+         </tbody>
+        </table>
+     
+
+        <br>
+        <h2 class="reqhed">Reports History</h2>
+        <table id="allReportsTable">
+            <thead>
+                <tr>
+                    <th>Week</th>
+                    <th>Hours Worked</th>
+                    <th>Submitted</th>
+                    <th>File</th>
+                    <th>Demerit</th>
+                    <th>Comment</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Rows will be added here dynamically -->
+            </tbody>
+        </table>
+   </div>
+</div>
+</section>
+     
+<footer class="footer">
+
+   &copy; Copyright @ 2023 by <span>The Croods</span> | All rights reserved!
+
+</footer>
+<script src="/js/script.js"></script>
+<script>
+   console.log('fullName:', '<%= fullName %>');
+</script>
+
+   
+</body>
+</html>

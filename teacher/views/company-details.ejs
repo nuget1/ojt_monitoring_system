@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8">
+   <meta http-equiv="X-UA-Compatible" content="IE=edge">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Home - OJT Portal</title>
+
+   <!-- font awesome cdn link  -->
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css">
+
+   <!-- custom css file link  -->
+   <link rel="stylesheet" type="text/css" href="/css/style.css">
+
+</head>
+<body>
+<header class="header">
+   
+   <section class="flex">
+
+      <a href="/homepage" class="logo">OJT Portal</a>
+
+
+      <div class="icons">
+         <div id="menu-btn" class="fas fa-bars"></div> 
+         <div id="search-btn" class="fas fa-search"></div>
+         <div id="toggle-btn" class="fas fa-sun"></div>
+      </div>
+
+   </section>
+
+</header>   
+
+<div class="side-bar">
+
+   <div id="close-btn">
+      <i class="fas fa-times"></i>
+   </div>
+
+   <div class="profile">
+      <img src="/images/pic-1.jpg" class="image" alt="">
+      <h3 class="name"><%= firstName + " " + lastName; %></h3>
+      <p class="role">Teacher</p>
+      <a href="/profile" class="btn">view profile</a>
+   </div>
+
+   <nav class="navbar">
+      <a href="/homepage"><i class="fas fa-home"></i><span>Home</span></a>
+      <a href="/manage-students"><i class="fa-solid fa-briefcase"></i><span>Manage Students</span></a>
+      <a href="/company-details"><i class="fa-solid fa-door-open"></i><span>Company Details</span></a>
+      <a href="/logout"><i class="fa-solid fa-door-open"></i><span>Log Out</span></a>
+   </nav>
+
+</div>
+
+<section class="home-grid">
+   <h1 class="heading">Company Details</h1>
+   <div class="box-container">
+      
+      <div class="adminbox">
+         <h3 class="title">Companies</h3>
+         <hr class="hrule">
+         <br>
+         <table>
+            <tr>
+               <th>Name</th>
+               <th>Address</th>
+               <th>Website</th>
+               <th>Contact</th>
+            </tr>
+            <% companies.forEach(company => { %>
+               <tr>
+                  <td><%= company.companyName %></td>
+                  <td><%= company.companyAddress %></td>
+                  <td><%= company.website %></td>
+                  <td><%= company.contact %></td>
+               </tr>
+            <% }); %>
+         </table>
+      </div>
+
+</section>
+
+<footer class="footer">
+
+   &copy; Copyright @ 2023 by <span>The Croods</span> | All rights reserved!
+
+</footer>
+
+<!-- custom js file link  -->
+<script src="/js/script.js"></script>
+<script>
+   console.log('fullName:', '<%= firstName + " " + lastName; %>');
+</script>
+
+   
+</body>
+</html>
